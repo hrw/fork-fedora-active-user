@@ -18,4 +18,16 @@ The script checks:
 All Fedora mailing lists hosted on
 [lists.fedoraproject.org](lists.fedoraproject.org)
 system are checked.
-This script depends on the [fedora-cert package](https://pagure.io/fedora-packager).
+
+
+Dependencies
+------------
+This script depends on the `python3-urllib-gssapi` package.
+
+To get data from FAS you need active Kerberos ticket:
+
+```
+$ kinit YOUR_USERID@FEDORAPROJECT.ORG
+
+```
+

@@ -14,18 +14,8 @@ The script checks:
 - last update on Bugzilla (takes a while)
 - last email set to mailing lists
 - last actions recorded by fedmsg
-The mailing lists considered are set at the top of the script, at
-the moment, they are:
-  fedora.devel
-  fedora.artwork
-  fedora.desktop
-  fedora.epel.devel
-  fedora.extras.packaging
-  fedora.fonts
-  fedora.general
-  fedora.infrastructure
-  fedora.kde
-  fedora.perl
-They are checked using gmane's function to search by sender's email.
 
+All Fedora mailing lists hosted on
+[lists.fedoraproject.org](lists.fedoraproject.org)
+system are checked.
 This script depends on the [fedora-cert package](https://pagure.io/fedora-packager).

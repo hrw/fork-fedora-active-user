@@ -31,6 +31,7 @@ import time
 import urllib.parse
 import urllib.request
 import urllib_gssapi
+import xmlrpc
 
 from bodhi.client.bindings import BodhiClient
 from bugzilla import Bugzilla
@@ -117,36 +118,40 @@ def _get_bugzilla_history(email, all_comments=False):
     print('   {0} bugs assigned, cc or on which {1} commented'.format(
         len(bugbz), email))
     # Retrieve the information about this user
-    user = bzclient.getuser(email)
-    bugbz.reverse()
+    try:
+        user = bzclient.getuser(email)
+        bugbz.reverse()
 
-    print('Last comment on the most recent ticket on bugzilla:')
-    ids = [bug.bug_id for bug in bugbz]
-    for bug in bzclient.getbugs(ids):
-        log.debug(bug.bug_id)
-        user_coms = [
-            com
-            for com in bug.longdescs
-            if com['creator_id'] == user.userid
-        ]
+        print('Last comment on the most recent ticket on bugzilla:')
+        ids = [bug.bug_id for bug in bugbz]
+        for bug in bzclient.getbugs(ids):
+            log.debug(bug.bug_id)
+            user_coms = [
+                com
+                for com in bug.longdescs
+                if com['creator_id'] == user.userid
+            ]
 
-        if user_coms:
-            last_com = user_coms[-1]
-            converted = datetime.datetime.strptime(last_com['time'].value,
-                                                   "%Y%m%dT%H:%M:%S")
-            print(
-                u'   #{0} {1} {2}'.format(
-                    bug.bug_id,
-                    converted.strftime('%Y-%m-%d'),
-                    last_com['creator']
+            if user_coms:
+                last_com = user_coms[-1]
+                converted = datetime.datetime.strptime(last_com['time'].value,
+                                                    "%Y%m%dT%H:%M:%S")
+                print(
+                    u'   #{0} {1} {2}'.format(
+                        bug.bug_id,
+                        converted.strftime('%Y-%m-%d'),
+                        last_com['creator']
+                    )
                 )
-            )
 
-        else:
-            continue
+            else:
+                continue
 
-            if not all_comments:
-                break
+                if not all_comments:
+                    break
+    except xmlrpc.client.Fault as e:
+        print(f"There was an error querying for '{email}':")
+        print(e)
 
 
 def _get_koji_history(username):

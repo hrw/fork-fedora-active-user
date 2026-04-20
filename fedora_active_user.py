@@ -292,9 +292,16 @@ def _get_fas_info(username):
     opener = urllib.request.build_opener(handler)
     urllib.request.install_opener(opener)
 
-    stream = urllib.request.urlopen(url)
-    data = json.loads(stream.read())
-    stream.close()
+    try:
+        stream = urllib.request.urlopen(url)
+        data = json.loads(stream.read())
+        stream.close()
+    except urllib.error.HTTPError as err:
+        if err.code == 401:
+            print("You need Kerberos ticket. Please run kinit.")
+        else:
+            print(err)
+        sys.exit(-1)
 
     return data['result']
 

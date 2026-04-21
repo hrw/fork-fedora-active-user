@@ -42,27 +42,6 @@ logging.basicConfig()
 log = logging.getLogger("active-user")
 
 
-_table_keys = {
-    'user_perms': ['user_id', 'perm_id'],
-    'user_groups': ['user_id', 'group_id'],
-    'cg_users': ['user_id', 'cg_id'],
-    'tag_inheritance': ['tag_id', 'parent_id'],
-    'tag_config': ['tag_id'],
-    'tag_extra': ['tag_id', 'key'],
-    'build_target_config': ['build_target_id'],
-    'external_repo_config': ['external_repo_id'],
-    'host_config': ['host_id'],
-    'host_channels': ['host_id', 'channel_id'],
-    'tag_external_repos': ['tag_id', 'external_repo_id'],
-    'tag_listing': ['build_id', 'tag_id'],
-    'tag_packages': ['package_id', 'tag_id'],
-    'tag_package_owners': ['package_id', 'tag_id'],
-    'group_config': ['group_id', 'tag_id'],
-    'group_req_listing': ['group_id', 'tag_id', 'req_id'],
-    'group_package_listing': ['group_id', 'tag_id', 'package'],
-}
-
-
 def print_info_with_time(info, time):
     time = datetime.datetime.fromtimestamp(int(time)).strftime('%F')
     print(f"   {time} {info}")
@@ -172,62 +151,26 @@ def _get_bugzilla_history(email, all_comments=False):
 
 def _get_koji_history(username):
     """
-    Print the last operation made by this user in koji.
-    This is partly stolen from the koji client written by:
-       Dennis Gregorovic <dgregor@redhat.com>
-       Mike McLean <mikem@redhat.com>
-       Cristian Balint <cbalint@redhat.com>
-
-    Note the _table_keys defined above is coming from the same source and may
-    need update every once in a while as well.
-
+    Print the last builds made by this user in koji.
     :arg username, the fas username whose history is investigated.
     """
-    kojiclient = koji.ClientSession('https://koji.fedoraproject.org/kojihub',
-                                    {})
+    kojiclient = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
 
     print('Last action on koji:')
     log.debug(f'Search last history element in koji for {username}')
-    histdata = kojiclient.queryHistory(user=username)
-    timeline = []
 
-    def distinguish_match(x, name):
-        """determine if create or revoke event matched"""
-        name = "_" + name
-        ret = True
-        for key in x:
-            if key.startswith(name):
-                ret = ret and x[key]
-        return ret
-    for table in histdata:
-        hist = histdata[table]
-        for x in hist:
-            if x['revoke_event'] is not None:
-                if distinguish_match(x, 'revoked'):
-                    timeline.append((x['revoke_event'], table, 0, x.copy()))
-            if distinguish_match(x, 'created'):
-                timeline.append((x['create_event'], table, 1, x))
-    timeline.sort(key=lambda entry: entry[:3])
-    # group edits together
-    new_timeline = []
-    last_event = None
-    edit_index = {}
-    for entry in timeline:
-        event_id, table, create, x = entry
-        if event_id != last_event:
-            edit_index = {}
-            last_event = event_id
-        if table not in _table_keys:
-            continue
-        key = tuple([x[k] for k in _table_keys[table]])
-        prev = edit_index.get((table, event_id), {}).get(key)
-        if prev:
-            prev[-1].setdefault('.related', []).append(entry)
-        else:
-            edit_index.setdefault((table, event_id), {})[key] = entry
-            new_timeline.append(entry)
-    for entry in new_timeline[-1:]:
-        _print_histline(entry)
+    user_data = kojiclient.getUser(username)
+
+    if not user_data:
+        print(f"User {username} not found.")
+        return
+
+    builds = kojiclient.listBuilds(userID=user_data["id"], state=1,
+                                   queryOpts={"limit": 10, "order":
+                                              "-build_id"})
+
+    for build in builds:
+        print_info_with_time(f"built {build["nvr"]}", build["creation_ts"])
 
 
 def _get_last_email_list(email):
@@ -306,159 +249,6 @@ def _get_fas_info(username):
         sys.exit(-1)
 
     return data['result']
-
-
-def _print_histline(entry, **kwargs):
-    """
-    This is mainly stolen from the koji client written by:
-       Dennis Gregorovic <dgregor@redhat.com>
-       Mike McLean <mikem@redhat.com>
-       Cristian Balint <cbalint@redhat.com>
-    """
-    event_id, table, create, x = entry
-    who = None
-    edit = x.get('.related')
-    if edit:
-        del x['.related']
-        bad_edit = None
-        if len(edit) != 1:
-            bad_edit = f'{len(edit) + 1} elements'
-        other = edit[0]
-        # check edit for sanity
-        if create or not other[2]:
-            bad_edit = "out of order"
-        if event_id != other[0]:
-            bad_edit = "non-matching"
-        if bad_edit:
-            print('Warning: unusual edit at event {0} in table {1} ({2})'
-                  ''.format(event_id, table, bad_edit))
-            # we'll simply treat them as separate events
-            _print_histline(entry, **kwargs)
-            for data in edit:
-                _print_histline(entry, **kwargs)
-            return
-    if create:
-        ts = x['create_ts']
-        if 'creator_name' in x:
-            who = "by %(creator_name)s"
-    else:
-        ts = x['revoke_ts']
-        if 'revoker_name' in x:
-            who = "by %(revoker_name)s"
-    if table == 'tag_listing':
-        if edit:
-            fmt = "%(name)s-%(version)s-%(release)s re-tagged into "\
-                  "%(tag.name)s"
-        elif create:
-            fmt = "%(name)s-%(version)s-%(release)s tagged into %(tag.name)s"
-        else:
-            fmt = "%(name)s-%(version)s-%(release)s untagged from %(tag.name)s"
-    elif table == 'user_perms':
-        if edit:
-            fmt = "permission %(permission.name)s re-granted to %(user.name)s"
-        elif create:
-            fmt = "permission %(permission.name)s granted to %(user.name)s"
-        else:
-            fmt = "permission %(permission.name)s revoked for %(user.name)s"
-    elif table == 'user_groups':
-        if edit:
-            fmt = "user %(user.name)s re-added to group %(group.name)s"
-        elif create:
-            fmt = "user %(user.name)s added to group %(group.name)s"
-        else:
-            fmt = "user %(user.name)s removed from group %(group.name)s"
-    elif table == 'tag_packages':
-        if edit:
-            fmt = "package list entry for %(package.name)s in %(tag.name)s "\
-                  "updated"
-        elif create:
-            fmt = "package list entry created: %(package.name)s in "\
-                  "%(tag.name)s"
-        else:
-            fmt = "package list entry revoked: %(package.name)s in "\
-                  "%(tag.name)s"
-    elif table == 'tag_inheritance':
-        if edit:
-            fmt = "inheritance line %(tag.name)s->%(parent.name)s updated"
-        elif create:
-            fmt = "inheritance line %(tag.name)s->%(parent.name)s added"
-        else:
-            fmt = "inheritance line %(tag.name)s->%(parent.name)s removed"
-    elif table == 'tag_config':
-        if edit:
-            fmt = "tag configuration for %(tag.name)s altered"
-        elif create:
-            fmt = "new tag: %(tag.name)s"
-        else:
-            fmt = "tag deleted: %(tag.name)s"
-    elif table == 'build_target_config':
-        if edit:
-            fmt = "build target configuration for %(build_target.name)s "\
-                  "updated"
-        elif create:
-            fmt = "new build target: %(build_target.name)s"
-        else:
-            fmt = "build target deleted: %(build_target.name)s"
-    elif table == 'external_repo_config':
-        if edit:
-            fmt = "external repo configuration for %(external_repo.name)s "\
-                  "altered"
-        elif create:
-            fmt = "new external repo: %(external_repo.name)s"
-        else:
-            fmt = "external repo deleted: %(external_repo.name)s"
-    elif table == 'tag_external_repos':
-        if edit:
-            fmt = "external repo entry for %(external_repo.name)s in tag "\
-                  "%(tag.name)s updated"
-        elif create:
-            fmt = "external repo entry for %(external_repo.name)s added to "\
-                  "tag %(tag.name)s"
-        else:
-            fmt = "external repo entry for %(external_repo.name)s removed "\
-                  "from tag %(tag.name)s"
-    elif table == 'group_config':
-        if edit:
-            fmt = "group %(group.name)s configuration for tag %(tag.name)s "\
-                  "updated"
-        elif create:
-            fmt = "group %(group.name)s added to tag %(tag.name)s"
-        else:
-            fmt = "group %(group.name)s removed from tag %(tag.name)s"
-    elif table == 'group_req_listing':
-        if edit:
-            fmt = "group dependency %(group.name)s->%(req.name)s updated in "\
-                  "tag %(tag.name)s"
-        elif create:
-            fmt = "group dependency %(group.name)s->%(req.name)s added in "\
-                  "tag %(tag.name)s"
-        else:
-            fmt = "group dependency %(group.name)s->%(req.name)s dropped from"\
-                  " tag %(tag.name)s"
-    elif table == 'group_package_listing':
-        if edit:
-            fmt = "package entry %(package)s in group %(group.name)s, tag "\
-                  "%(tag.name)s updated"
-        elif create:
-            fmt = "package %(package)s added to group %(group.name)s in tag "\
-                  "%(tag.name)s"
-        else:
-            fmt = "package %(package)s removed from group %(group.name)s in "\
-                  "tag %(tag.name)s"
-    else:
-        if edit:
-            fmt = "%s entry updated" % table
-        elif create:
-            fmt = "%s entry created" % table
-        else:
-            fmt = "%s entry revoked" % table
-    time_str = time.strftime("%F", time.localtime(ts))
-    parts = [time_str, fmt % x]
-    if who:
-        parts.append(who % x)
-    if create and x['active']:
-        parts.append("[still active]")
-    print('   ' + ' '.join(parts))
 
 
 def main():

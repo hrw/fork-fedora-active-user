@@ -63,6 +63,11 @@ _table_keys = {
 }
 
 
+def print_info_with_time(info, time):
+    time = datetime.datetime.fromtimestamp(int(time)).strftime('%F')
+    print(f"   {time} {info}")
+
+
 def fetch_json(url):
     log.debug(f"Fetching {url}")
 
@@ -264,11 +269,8 @@ def _get_fedmsg_history(username):
         'rows_per_page=10'
     jsonobj = fetch_json(url)
     for entry in jsonobj['raw_messages']:
-        print('  - %s on %s' % (
-            entry['meta']['subtitle'],
-            datetime.datetime.fromtimestamp(
-                int(entry['timestamp'])
-            ).strftime('%Y-%m-%d %H:%M:%S'))),
+        print_info_with_time(entry['meta']['subtitle'],
+                             int(entry['timestamp']))
         if 'meetbot' in entry['topic']:
             if username in entry['msg']['chairs']:
                 print("(%s was a chair)" % username),
@@ -450,7 +452,7 @@ def _print_histline(entry, **kwargs):
             fmt = "%s entry created" % table
         else:
             fmt = "%s entry revoked" % table
-    time_str = time.strftime("%a, %d %b %Y", time.localtime(ts))
+    time_str = time.strftime("%F", time.localtime(ts))
     parts = [time_str, fmt % x]
     if who:
         parts.append(who % x)

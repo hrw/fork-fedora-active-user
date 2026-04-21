@@ -188,14 +188,13 @@ def _get_last_email_list(email):
         print("   No activity found on Fedora mailing lists")
     else:
         for entry in data["results"]:
-            print(
-                "  On {0} {1} emailed as {2} on {3}".format(
-                    entry["date"],
-                    email,
-                    entry["sender_name"],
-                    entry["mailinglist"],
-                )
-            )
+            ml = entry["mailinglist"].replace(
+                    'https://lists.fedoraproject.org/archives/api/list/',
+                    '')
+            print_info_with_time(f"{email} as {entry["sender_name"]} mailed "
+                                 f"{ml[:-1]}",
+                                 datetime.datetime.fromisoformat(
+                                     entry["date"]).timestamp())
 
 
 def _get_fedmsg_history(username):

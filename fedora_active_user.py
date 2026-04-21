@@ -63,6 +63,16 @@ _table_keys = {
 }
 
 
+def fetch_json(url):
+    log.debug(f"Fetching {url}")
+
+    stream = urllib.request.urlopen(url)
+    json_data = json.loads(stream.read())
+    stream.close()
+
+    return json_data
+
+
 def _get_bodhi_history(username):
     """ Print the last action performed on bodhi by the given FAS user.
 
@@ -225,10 +235,7 @@ def _get_last_email_list(email):
     print('Last email on mailing list:')
     url = ("https://lists.fedoraproject.org/archives/api/sender/"
            f"{email}/emails/")
-    log.debug('Querying {0}'.format(url))
-    stream = urllib.request.urlopen(url)
-    data = json.loads(stream.read())
-    stream.close()
+    data = fetch_json(url)
     if not data["count"]:
         print("   No activity found on Fedora mailing lists")
     else:
@@ -256,11 +263,7 @@ def _get_fedmsg_history(username):
     url = 'https://apps.fedoraproject.org/datagrepper/raw'\
         '?user=%s&order=desc&delta=31104000&meta=subtitle&'\
         'rows_per_page=10' % (username)
-    log.debug(url)
-    stream = urllib.request.urlopen(url)
-    page = stream.read()
-    stream.close()
-    jsonobj = json.loads(page)
+    jsonobj = fetch_json(url)
     for entry in jsonobj['raw_messages']:
         print('  - %s on %s' % (
             entry['meta']['subtitle'],
@@ -293,9 +296,7 @@ def _get_fas_info(username):
     urllib.request.install_opener(opener)
 
     try:
-        stream = urllib.request.urlopen(url)
-        data = json.loads(stream.read())
-        stream.close()
+        data = fetch_json(url)
     except urllib.error.HTTPError as err:
         if err.code == 401:
             print("You need Kerberos ticket. Please run kinit.")

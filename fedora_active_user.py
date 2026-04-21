@@ -22,17 +22,16 @@ project.
 """
 
 import argparse
-import datetime
 import json
 import koji
 import logging
 import sys
-import time
 import urllib.parse
 import urllib.request
 import urllib_gssapi
 import xmlrpc
 
+from datetime import datetime
 from bodhi.client.bindings import BodhiClient
 from bugzilla import Bugzilla
 
@@ -43,7 +42,7 @@ log = logging.getLogger("active-user")
 
 
 def print_info_with_time(info, time):
-    time = datetime.datetime.fromtimestamp(int(time)).strftime('%F')
+    time = datetime.fromtimestamp(int(time)).strftime('%F')
     print(f"   {time} {info}")
 
 
@@ -72,8 +71,7 @@ def _get_bodhi_history(username):
 
     def dategetter(field):
         def getter(item):
-            return datetime.datetime.strptime(item[field],
-                                              "%Y-%m-%d %H:%M:%S")
+            return datetime.strptime(item[field], "%Y-%m-%d %H:%M:%S")
 
         return getter
 
@@ -129,8 +127,8 @@ def _get_bugzilla_history(email, all_comments=False):
 
             if user_coms:
                 last_com = user_coms[-1]
-                converted = datetime.datetime.strptime(last_com['time'].value,
-                                                    "%Y%m%dT%H:%M:%S")
+                converted = datetime.strptime(last_com['time'].value,
+                                              "%Y%m%dT%H:%M:%S")
                 print(
                     u'   #{0} {1} {2}'.format(
                         bug.bug_id,
@@ -193,7 +191,7 @@ def _get_last_email_list(email):
                     '')
             print_info_with_time(f"{email} as {entry["sender_name"]} mailed "
                                  f"{ml[:-1]}",
-                                 datetime.datetime.fromisoformat(
+                                 datetime.fromisoformat(
                                      entry["date"]).timestamp())
 
 

@@ -80,7 +80,9 @@ def _get_bodhi_history(username):
     """
     bodhiclient = BodhiClient("https://bodhi.fedoraproject.org/")
 
-    log.debug('Querying Bodhi for user: {0}'.format(username))
+    print()
+    print('Last package update on bodhi:')
+    log.debug(f'Querying Bodhi for user: {username}')
     json_obj = bodhiclient.send_request(
         "updates/?user=%s" % username, verb='GET')
 
@@ -91,7 +93,6 @@ def _get_bodhi_history(username):
 
         return getter
 
-    print('Last package update on bodhi:')
     if json_obj['updates']:
         latest = sorted(json_obj['updates'], key=dategetter("date_submitted")
                         )[-1]
@@ -113,9 +114,10 @@ def _get_bugzilla_history(email, all_comments=False):
     """
     bzclient = Bugzilla(url='https://bugzilla.redhat.com/xmlrpc.cgi')
 
-    log.debug('Querying bugzilla for email: {0}'.format(email))
+    print()
+    print("Last Bugzilla activity")
+    log.debug(f'Querying Bugzilla for email: {email}')
 
-    print("Bugzilla activity")
     bugbz = bzclient.query({
         'emailtype1': 'substring',
         'emailcc1': True,
@@ -125,14 +127,13 @@ def _get_bugzilla_history(email, all_comments=False):
         'bug_status': ['ASSIGNED', 'NEW', 'NEEDINFO'],
         'email1': email
     })
-    print('   {0} bugs assigned, cc or on which {1} commented'.format(
-        len(bugbz), email))
+    print(f'   {len(bugbz)} bugs assigned, cc or on which {email} commented')
     # Retrieve the information about this user
     try:
         user = bzclient.getuser(email)
         bugbz.reverse()
 
-        print('Last comment on the most recent ticket on bugzilla:')
+        print('Last comment on the most recent ticket on Bugzilla:')
         ids = [bug.bug_id for bug in bugbz]
         for bug in bzclient.getbugs(ids):
             log.debug(bug.bug_id)
@@ -180,7 +181,8 @@ def _get_koji_history(username):
     kojiclient = koji.ClientSession('https://koji.fedoraproject.org/kojihub',
                                     {})
 
-    log.debug('Search last history element in koji for {0}'.format(username))
+    print('Last action on koji:')
+    log.debug(f'Search last history element in koji for {username}')
     histdata = kojiclient.queryHistory(user=username)
     timeline = []
 
@@ -219,11 +221,8 @@ def _get_koji_history(username):
         else:
             edit_index.setdefault((table, event_id), {})[key] = entry
             new_timeline.append(entry)
-    print('Last action on koji:')
     for entry in new_timeline[-1:]:
         _print_histline(entry)
-
-    print()
 
 
 def _get_last_email_list(email):
@@ -231,8 +230,9 @@ def _get_last_email_list(email):
 
     :arg email, the email address to search on the mailing lists.
     """
-    log.debug('Searching activity for {0} on the Fedora lists'.format(email))
+    print()
     print('Last email on mailing list:')
+    log.debug(f'Searching activity for {email} on the Fedora mailing lists')
     url = ("https://lists.fedoraproject.org/archives/api/sender/"
            f"{email}/emails/")
     data = fetch_json(url)
@@ -248,7 +248,6 @@ def _get_last_email_list(email):
                     entry["mailinglist"],
                 )
             )
-    print()
 
 
 def _get_fedmsg_history(username):
@@ -257,12 +256,12 @@ def _get_fedmsg_history(username):
 
     :arg username, the fas username whose action is searched.
     """
-    log.debug('Searching datagrepper for the action of {0}'.format(
-        username))
+    print()
     print('Last actions performed according to fedmsg:')
+    log.debug(f'Searching datagrepper for the action of {username}')
     url = 'https://apps.fedoraproject.org/datagrepper/raw'\
-        '?user=%s&order=desc&delta=31104000&meta=subtitle&'\
-        'rows_per_page=10' % (username)
+        f'?user={username}&order=desc&delta=31104000&meta=subtitle&'\
+        'rows_per_page=10'
     jsonobj = fetch_json(url)
     for entry in jsonobj['raw_messages']:
         print('  - %s on %s' % (
@@ -279,7 +278,6 @@ def _get_fedmsg_history(username):
                 # datagrepper returned this message for our user, but the user
                 # doesn't appear in the message.  How?
                 raise ValueError("This shouldn't happen.")
-    print()
 
 
 def _get_fas_info(username):
@@ -288,9 +286,10 @@ def _get_fas_info(username):
     :arg username, the fas username from who we would like to see information
     """
 
-    log.debug('Querying FAS for user: {0}'.format(username))
+    log.debug(f'Querying FAS for user: {username}')
     url = (f"https://fasjson.fedoraproject.org/v1/users/{username}/")
 
+    # We need to handle Kerberos in fetching URL
     handler = urllib_gssapi.HTTPSPNEGOAuthHandler()
     opener = urllib.request.build_opener(handler)
     urllib.request.install_opener(opener)
@@ -321,7 +320,7 @@ def _print_histline(entry, **kwargs):
         del x['.related']
         bad_edit = None
         if len(edit) != 1:
-            bad_edit = '{0} elements'.format(len(edit) + 1)
+            bad_edit = f'{len(edit) + 1} elements'
         other = edit[0]
         # check edit for sanity
         if create or not other[2]:

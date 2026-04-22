@@ -207,11 +207,18 @@ def _get_fedmsg_history(username):
         print_info_with_time(entry['meta']['subtitle'],
                              int(entry['timestamp']))
         if 'meetbot' in entry['topic']:
+            done = False
             if username in entry['msg']['chairs']:
-                print("(%s was a chair)" % username),
-            elif username in entry['msg']['attendees']:
-                print("(%s participated)" % username),
-            else:
+                print_info_with_time(f"{username} chaired", entry["timestamp"])
+                done = True
+
+            for a in entry['msg']['attendees']:
+                if username == a["name"]:
+                    print_info_with_time(f"{username} participated",
+                                         entry["timestamp"])
+                    done = True
+
+            if not done:
                 # datagrepper returned this message for our user, but the user
                 # doesn't appear in the message.  How?
                 raise ValueError("This shouldn't happen.")

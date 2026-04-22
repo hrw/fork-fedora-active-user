@@ -79,7 +79,7 @@ def _get_bodhi_history(username):
         print('   No activity found on bodhi')
 
 
-def _get_bugzilla_history(email, all_comments=False):
+def _get_bugzilla_history(email, fas_info, all_comments=False):
     """ Query the bugzilla for all bugs to which the provided email
     is either assigned or cc'ed. Then for each bug found, print the
     latest comment from this user (if any).
@@ -111,7 +111,7 @@ def _get_bugzilla_history(email, all_comments=False):
 
         ids = [bug.bug_id for bug in bugbz]
         for bug in bzclient.getbugs(ids):
-            log.debug(f"Checking comments for #{bug.id}")
+            log.debug(f"Checking bug #{bug.id}")
             user_coms = [
                 com
                 for com in bug.longdescs
@@ -129,6 +129,13 @@ def _get_bugzilla_history(email, all_comments=False):
                                          comment_time)
                     if not all_comments:
                         break
+            elif bug.assigned_to in [fas_info['human_name'],
+                                     fas_info['username']]:
+                create_time = datetime.strptime(bug.creation_time.value,
+                                                "%Y%m%dT%H:%M:%S"
+                                                ).timestamp()
+                print_info_with_time(f"#{bug.id} got assigned to {email}",
+                                     create_time)
 
     except xmlrpc.client.Fault as e:
         print(f"There was an error querying for '{email}':")
@@ -257,7 +264,7 @@ def main():
     elif args.verbose:
         log.setLevel(logging.INFO)
 
-    fas_info = {}
+    fas_info = {'human_name': '', 'username':''}
 
     try:
         if args.username:
@@ -286,7 +293,7 @@ def main():
         if not args.nolists:
             _get_last_email_list(email)
         if not args.nobz:
-            _get_bugzilla_history(bugemail, args.all_comments)
+            _get_bugzilla_history(bugemail, fas_info, args.all_comments)
 
     except Exception as err:
         if args.debug:

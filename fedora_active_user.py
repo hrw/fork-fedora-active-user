@@ -25,6 +25,7 @@ import argparse
 import json
 import koji
 import logging
+import shutil
 import sys
 import urllib.parse
 import urllib.request
@@ -40,10 +41,12 @@ from bugzilla import Bugzilla
 logging.basicConfig()
 log = logging.getLogger("active-user")
 
+terminal_columns = shutil.get_terminal_size().columns
+
 
 def print_info_with_time(info, time):
     time = datetime.fromtimestamp(int(time)).strftime('%F')
-    print(f"   {time} {info}")
+    print(f"   {time} {info[:terminal_columns - 15]}")
 
 
 def fetch_json(url):

@@ -55,9 +55,10 @@ def fetch_json(url):
     """
     log.debug(f"Fetching {url}")
 
-    stream = urllib.request.urlopen(url)
-    json_data = json.loads(stream.read())
-    stream.close()
+    json_data = ""
+
+    with urllib.request.urlopen(url) as stream:
+        json_data = json.loads(stream.read())
 
     return json_data
 

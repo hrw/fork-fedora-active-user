@@ -266,7 +266,6 @@ def main():
     parser = setup_parser()
     args = parser.parse_args()
 
-    global log
     if args.debug:
         log.setLevel(logging.DEBUG)
     elif args.verbose:
@@ -274,44 +273,33 @@ def main():
 
     fas_info = {'human_name': '', 'username': ''}
 
-    try:
-        if args.username:
-            if not args.nofas:
-                fas_info = _get_fas_info(args.username)
-            if not args.nokoji:
-                _get_koji_history(args.username)
-            if not args.nobodhi:
-                _get_bodhi_history(args.username)
-            if not args.nofedmsg:
-                _get_fedmsg_history(args.username)
+    if args.username:
+        if not args.nofas:
+            fas_info = _get_fas_info(args.username)
+        if not args.nokoji:
+            _get_koji_history(args.username)
+        if not args.nobodhi:
+            _get_bodhi_history(args.username)
+        if not args.nofedmsg:
+            _get_fedmsg_history(args.username)
 
-        if args.email:
-            email = args.email
-        elif 'emails' in fas_info:
-            email = fas_info["emails"][0]
-        else:
-            # no email, our job is done
-            sys.exit(0)
+    if args.email:
+        email = args.email
+    elif 'emails' in fas_info:
+        email = fas_info["emails"][0]
+    else:
+        # no email, our job is done
+        sys.exit(0)
 
-        if 'rhbzemail' in fas_info and fas_info['rhbzemail'] is not None:
-            bugemail = fas_info["rhbzemail"]
-        else:
-            bugemail = email
+    if 'rhbzemail' in fas_info and fas_info['rhbzemail'] is not None:
+        bugemail = fas_info["rhbzemail"]
+    else:
+        bugemail = email
 
-        if not args.nolists:
-            _get_last_email_list(email)
-        if not args.nobz:
-            _get_bugzilla_history(bugemail, fas_info, args.all_comments)
-
-    except Exception as err:
-        if args.debug:
-            log.exception(err)
-        else:
-            log.error(err)
-
-        return 1
-
-    return 0
+    if not args.nolists:
+        _get_last_email_list(email)
+    if not args.nobz:
+        _get_bugzilla_history(bugemail, fas_info, args.all_comments)
 
 
 def setup_parser():

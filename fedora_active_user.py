@@ -100,31 +100,32 @@ def _get_bugzilla_history(email, fas_info, all_comments=False):
     bzclient = Bugzilla(url='https://bugzilla.redhat.com/xmlrpc.cgi')
 
     print()
-    print("Last Bugzilla activity:")
+    print("Bugzilla activity (may not be the latest):")
     log.debug(f'Querying Bugzilla for email: {email}')
 
-    bugbz = bzclient.query({
-        'emailtype1': 'substring',
-        'emailcc1': True,
-        'emailassigned_to1': True,
-        'query_format': 'advanced',
-        'order': 'last_change_time',
-        'bug_status': ['ASSIGNED', 'NEW', 'NEEDINFO'],
-        'email1': email
-    })
-    print(f'   {len(bugbz)} bugs assigned, cc or on which {email} commented')
-    # Retrieve the information about this user
     try:
+        bugs = bzclient.query({
+            'bug_status': ['ASSIGNED', 'NEW', 'NEEDINFO'],
+            'email1': email,
+            'emailassigned_to1': True,
+            'emailtype1': 'substring',
+            'order': 'last_change_time DESC',
+            'query_format': 'advanced',
+        })
+
+        if not bugs:
+            print("   No activity found on Bugzilla")
+            return
+
+        # Retrieve the information about this user
         user = bzclient.getuser(email)
 
-        ids = [bug.bug_id for bug in bugbz]
-        for bug in bzclient.getbugs(ids):
+        for bug in bzclient.getbugs([bug.id for bug in bugs]):
             log.debug(f"Checking bug #{bug.id}")
-            user_coms = [
-                com
-                for com in bug.longdescs
-                if com['creator_id'] == user.userid
-            ]
+
+            # Collect comments by this user
+            user_coms = [com for com in bug.longdescs
+                         if com['creator_id'] == user.userid]
 
             if user_coms:
                 for comment in user_coms:
@@ -137,8 +138,19 @@ def _get_bugzilla_history(email, fas_info, all_comments=False):
                                          comment_time)
                     if not all_comments:
                         break
-            elif bug.assigned_to in [fas_info['human_name'],
-                                     fas_info['username']]:
+            else:
+                create_time = datetime.strptime(bug.creation_time.value,
+                                                "%Y%m%dT%H:%M:%S"
+                                                ).timestamp()
+                print_info_with_time(f"#{bug.id} "
+                                     f"({bug.product}/{bug.component}) "
+                                     f"{bug.summary}",
+                                     create_time)
+
+            # Try to check is bug assigned to this user
+            # email check requires Bugzilla API key
+            if bug.assigned_to in [email, fas_info['human_name'],
+                                   fas_info['username']]:
                 create_time = datetime.strptime(bug.creation_time.value,
                                                 "%Y%m%dT%H:%M:%S"
                                                 ).timestamp()

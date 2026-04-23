@@ -22,16 +22,18 @@ project.
 
 import argparse
 import json
-import koji
 import logging
 import shutil
 import sys
 import urllib.parse
 import urllib.request
-import urllib_gssapi
 import xmlrpc
 
 from datetime import datetime
+
+import koji
+import urllib_gssapi
+
 from bodhi.client.bindings import BodhiClient
 from bugzilla import Bugzilla
 

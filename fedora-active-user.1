@@ -1,0 +1,44 @@
+.TH fedora-active-user "1" "April 2026" "fedora-active-user 2026.04" "User Commands"
+.SH NAME
+fedora-active-user \- manual page for fedora-active-user 2026.04
+.SH DESCRIPTION
+usage: fedora-active-user [\-h] [\-\-user USERNAME] [\-\-email EMAIL] [\-\-nofas]
+[\-\-nokoji] [\-\-nolists] [\-\-nobodhi] [\-\-nobz]
+[\-\-nofedmsg] [\-\-all\-comments] [\-\-verbose] [\-\-debug]
+.SS "options:"
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+show this help message and exit
+.TP
+\fB\-\-user\fR USERNAME
+FAS username (preferred)
+.TP
+\fB\-\-email\fR EMAIL
+Bugzilla email looked for
+.TP
+\fB\-\-nofas\fR
+Do not check FAS
+.TP
+\fB\-\-nokoji\fR
+Do not check Koji
+.TP
+\fB\-\-nolists\fR
+Do not check mailing lists
+.TP
+\fB\-\-nobodhi\fR
+Do not check Bodhi
+.TP
+\fB\-\-nobz\fR
+Do not check Bugzilla
+.TP
+\fB\-\-nofedmsg\fR
+Do not check Fedmsg
+.TP
+\fB\-\-all\-comments\fR
+Prints the date of all the comments made by this person on Bugzilla.
+.TP
+\fB\-\-verbose\fR
+Gives more info about what's going on.
+.TP
+\fB\-\-debug\fR
+Outputs bunches of debugging info

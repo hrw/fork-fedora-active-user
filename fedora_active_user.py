@@ -51,6 +51,16 @@ def print_info_with_time(info, time):
     print(f"   {time} {info[:terminal_columns - 15]}")
 
 
+def parse_timestamp(timestamp_str, timeformat="%Y%m%dT%H:%M:%S"):
+    """Parse timestamp string to Unix timestamp.
+
+    :arg timestamp_str: Timestamp string in format "YYYYMMDDTHH:MM:SS"
+    :arg timeformat: Alternative time format string
+    :returns: Unix timestamp as float
+    """
+    return datetime.strptime(timestamp_str, timeformat).timestamp()
+
+
 def fetch_json(url):
     """ Fetch given URL, returns JSON data
     """
@@ -78,9 +88,8 @@ def _get_bodhi_history(username):
 
     if json_obj['updates']:
         for update in json_obj['updates']:
-            update_time = datetime.strptime(update['date_submitted'],
-                                            "%Y-%m-%d %H:%M:%S"
-                                            ).timestamp()
+            update_time = parse_timestamp(update['date_submitted'],
+                                          "%Y-%m-%d %H:%M:%S")
             print_info_with_time(update["title"], update_time)
     else:
         print('   No activity found on bodhi')
@@ -128,9 +137,7 @@ def _get_bugzilla_history(email, fas_info, all_comments=False):
 
             if user_coms:
                 for comment in user_coms:
-                    comment_time = datetime.strptime(comment['time'].value,
-                                                     "%Y%m%dT%H:%M:%S"
-                                                     ).timestamp()
+                    comment_time = parse_timestamp(comment['time'].value)
                     print_info_with_time(f"#{bug.id} "
                                          f"({bug.product}/{bug.component}) "
                                          f"{bug.summary}",
@@ -138,9 +145,7 @@ def _get_bugzilla_history(email, fas_info, all_comments=False):
                     if not all_comments:
                         break
             else:
-                create_time = datetime.strptime(bug.creation_time.value,
-                                                "%Y%m%dT%H:%M:%S"
-                                                ).timestamp()
+                create_time = parse_timestamp(bug.creation_time.value)
                 print_info_with_time(f"#{bug.id} "
                                      f"({bug.product}/{bug.component}) "
                                      f"{bug.summary}",
@@ -150,9 +155,7 @@ def _get_bugzilla_history(email, fas_info, all_comments=False):
             # email check requires Bugzilla API key
             if bug.assigned_to in [email, fas_info['human_name'],
                                    fas_info['username']]:
-                create_time = datetime.strptime(bug.creation_time.value,
-                                                "%Y%m%dT%H:%M:%S"
-                                                ).timestamp()
+                create_time = parse_timestamp(bug.creation_time.value)
                 print_info_with_time(f"#{bug.id} got assigned to {email}",
                                      create_time)
 

@@ -61,15 +61,29 @@ def parse_timestamp(timestamp_str, timeformat="%Y%m%dT%H:%M:%S"):
     return datetime.strptime(timestamp_str, timeformat).timestamp()
 
 
-def fetch_json(url):
+def fetch_json(url, username=""):
     """ Fetch given URL, returns JSON data
     """
     log.debug(f"Fetching {url}")
 
     json_data = ""
 
-    with urllib.request.urlopen(url) as stream:
-        json_data = json.loads(stream.read())
+    try:
+        with urllib.request.urlopen(url) as stream:
+            json_data = json.loads(stream.read())
+    except urllib.error.URLError as err:
+        log.error(f"Failed to fetch {url}: {err}")
+        if err.code == 401:
+            print("You need Kerberos ticket. Please run kinit.")
+        elif err.code == 404:
+            print(f"User {username} was not found on FAS.")
+        else:
+            print(err)
+
+        # add empty line after error message to have separation
+        print("")
+
+        return {}
 
     return json_data
 
@@ -264,16 +278,7 @@ def _get_fas_info(username):
     opener = urllib.request.build_opener(handler)
     urllib.request.install_opener(opener)
 
-    try:
-        data = fetch_json(url)
-    except urllib.error.HTTPError as err:
-        if err.code == 401:
-            print("You need Kerberos ticket. Please run kinit.")
-        elif err.code == 404:
-            print(f"User {username} was not found on FAS.")
-        else:
-            print(err)
-        sys.exit(-1)
+    data = fetch_json(url, username)
 
     return data['result']
 

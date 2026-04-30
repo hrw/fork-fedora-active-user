@@ -20,7 +20,7 @@ system are checked.
 
 Dependencies
 ------------
-This script depends on the `python3-urllib-gssapi` package.
+This script depends on the `python3-requests-kerberos` package.
 
 To get data from FAS you need active Kerberos ticket:
 

@@ -20,21 +20,19 @@ project.
 """
 
 import argparse
-import json
 import logging
 import shutil
 import sys
-import urllib.parse
-import urllib.request
 import xmlrpc.client
 
 from datetime import datetime
 
 import koji
-import urllib_gssapi
+import requests
 
 from bodhi.client.bindings import BodhiClient
 from bugzilla import Bugzilla
+from requests_kerberos import HTTPKerberosAuth
 
 
 # Initial simple logging stuff
@@ -61,21 +59,30 @@ def parse_timestamp(timestamp_str, timeformat="%Y%m%dT%H:%M:%S"):
     return datetime.strptime(timestamp_str, timeformat).timestamp()
 
 
-def fetch_json(url, username=""):
+def fetch_json(url, kerberos=False, username=""):
     """ Fetch given URL, returns JSON data
     """
-    log.debug(f"Fetching {url}")
+    log.debug(f"Fetching {url}, Kerberos: {kerberos}")
 
     json_data = ""
 
     try:
-        with urllib.request.urlopen(url) as stream:
-            json_data = json.loads(stream.read())
-    except urllib.error.URLError as err:
-        log.error(f"Failed to fetch {url}: {err}")
-        if err.code == 401:
+        if kerberos:
+            r = requests.get(url, auth=HTTPKerberosAuth())
+        else:
+            r = requests.get(url)
+
+        json_data = r.json()
+
+        if r.status_code == 401:
             print("You need Kerberos ticket. Please run kinit.")
-        elif err.code == 404:
+
+    except requests.ConnectionError as err:
+        log.error(f"Failed to fetch {url}: {err}")
+
+        if r.status_code == 401:
+            print("You need Kerberos ticket. Please run kinit.")
+        elif r.status_code == 404:
             print(f"User {username} was not found on FAS.")
         else:
             print(err)
@@ -98,11 +105,7 @@ def _get_fas_info(username):
     url = f"https://fasjson.fedoraproject.org/v1/users/{username}/"
 
     # We need to handle Kerberos in fetching URL
-    handler = urllib_gssapi.HTTPSPNEGOAuthHandler()
-    opener = urllib.request.build_opener(handler)
-    urllib.request.install_opener(opener)
-
-    data = fetch_json(url, username)
+    data = fetch_json(url, True, username)
 
     if not data:
         print("   Error querying FAS")

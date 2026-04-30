@@ -171,6 +171,7 @@ def _get_koji_history(username):
     """
     kojiclient = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
 
+    print()
     print('Last action on koji:')
     log.debug(f'Search last history element in koji for {username}')
 

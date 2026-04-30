@@ -106,7 +106,7 @@ def _get_fas_info(username):
 
     if not data:
         print("   Error querying FAS")
-        return
+        return {}
 
     return data['result']
 
@@ -287,8 +287,8 @@ def _get_bugzilla_history(email, fas_info, all_comments=False):
 
             # Try to check is bug assigned to this user
             # email check requires Bugzilla API key
-            if bug.assigned_to in [email, fas_info['human_name'],
-                                   fas_info['username']]:
+            if bug.assigned_to in [email, fas_info.get('human_name', ''),
+                                   fas_info.get('username', '')]:
                 create_time = parse_timestamp(bug.creation_time.value)
                 print_info_with_time(f"#{bug.id} got assigned to {email}",
                                      create_time)
@@ -308,7 +308,7 @@ def main():
     elif args.verbose:
         log.setLevel(logging.INFO)
 
-    fas_info = {'human_name': '', 'username': ''}
+    fas_info = {}
 
     if args.username:
         if not args.nofas:

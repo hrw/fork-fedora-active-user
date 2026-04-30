@@ -216,18 +216,21 @@ def _get_last_email_list(email):
     log.debug(f'Searching activity for {email} on the Fedora mailing lists')
     url = ("https://lists.fedoraproject.org/archives/api/sender/"
            f"{email}/emails/")
+
     data = fetch_json(url)
+
     if not data["count"]:
         print("   No activity found on Fedora mailing lists")
-    else:
-        for entry in data["results"]:
-            ml = entry["mailinglist"].replace(
-                    'https://lists.fedoraproject.org/archives/api/list/',
-                    '')
-            print_info_with_time(f"{email} as {entry["sender_name"]} mailed "
-                                 f"{ml[:-1]}",
-                                 datetime.fromisoformat(
-                                     entry["date"]).timestamp())
+        return
+
+    for entry in data["results"]:
+        ml = entry["mailinglist"].replace(
+                'https://lists.fedoraproject.org/archives/api/list/',
+                '')
+        print_info_with_time(f"{email} as {entry["sender_name"]} mailed "
+                             f"{ml[:-1]}",
+                             datetime.fromisoformat(
+                                 entry["date"]).timestamp())
 
 
 def _get_fedmsg_history(username):
@@ -242,8 +245,14 @@ def _get_fedmsg_history(username):
     url = 'https://apps.fedoraproject.org/datagrepper/raw'\
         f'?user={username}&order=desc&delta={365 * 24 * 60 * 60}'\
         '&meta=subtitle&rows_per_page=10'
-    jsonobj = fetch_json(url)
-    for entry in jsonobj['raw_messages']:
+
+    data = fetch_json(url)
+
+    if not data:
+        print("   Error querying Fedmsg")
+        return
+
+    for entry in data['raw_messages']:
         print_info_with_time(entry['meta']['subtitle'],
                              int(entry['timestamp']))
         if 'meetbot' in entry['topic']:
@@ -279,6 +288,10 @@ def _get_fas_info(username):
     urllib.request.install_opener(opener)
 
     data = fetch_json(url, username)
+
+    if not data:
+        print("   Error querying FAS")
+        return
 
     return data['result']
 

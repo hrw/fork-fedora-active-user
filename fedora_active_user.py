@@ -125,21 +125,27 @@ def _get_koji_history(username):
     print('Last action on koji:')
     log.debug(f'Search last history element in koji for {username}')
 
-    user_data = kojiclient.getUser(username)
+    try:
+        user_data = kojiclient.getUser(username)
 
-    if not user_data:
-        print(f"User {username} not found.")
-        return
+        if not user_data:
+            print(f"User {username} not found.")
+            return
 
-    builds = kojiclient.listBuilds(userID=user_data["id"], state=1,
-                                   queryOpts={"limit": 10, "order":
-                                              "-build_id"})
+        builds = kojiclient.listBuilds(userID=user_data["id"], state=1,
+                                       queryOpts={"limit": 10, "order":
+                                                  "-build_id"})
 
-    if builds:
-        for build in builds:
-            print_info_with_time(f"built {build["nvr"]}", build["creation_ts"])
-    else:
-        print("   No activity found on koji")
+        if builds:
+            for build in builds:
+                print_info_with_time(f"built {build["nvr"]}",
+                                     build["creation_ts"])
+        else:
+            print("   No activity found on koji")
+
+    except koji.GenericError as e:
+        log.error(f"Koji error for user {username}: {e}")
+        print("   Error querying Koji")
 
 
 def _get_bodhi_history(username):
